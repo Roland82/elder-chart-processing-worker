@@ -1,0 +1,20 @@
+CREATE KEYSPACE elder WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '2'}  AND durable_writes = true;
+
+CREATE TABLE elder.datapoints (
+    symbol text,
+    date timestamp,
+    open decimal,
+    close decimal,
+    high decimal,
+    low decimal,
+    volume int,
+    movingAverage20Day decimal,
+    movingAverage50Day decimal,
+    movingAverage100Day decimal,
+    movingAverage200Day decimal,
+    averageTrueRange14Day decimal,
+    forceIndex decimal,
+    relativeStrengthIndex14Day decimal,
+    highOrLow52Week int,
+    PRIMARY KEY ((symbol), date))
+    WITH CLUSTERING ORDER BY (date ASC);

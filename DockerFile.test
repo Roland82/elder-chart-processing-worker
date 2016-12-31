@@ -1,0 +1,8 @@
+FROM hseeberger/scala-sbt:latest
+
+MAINTAINER roland.ormrod@googlemail.com
+
+RUN mkdir /usr/app
+COPY . /usr/app/
+WORKDIR /usr/app
+CMD ["sbt", "test"]

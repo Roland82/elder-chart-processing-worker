@@ -1,0 +1,15 @@
+rabbitmq:
+  image: rabbitmq:3-management
+  ports:
+    - "15672:15672"
+    - "5672:5672"
+  environment:
+    - RABBITMQ_DEFAULT_USER=user
+    - RABBITMQ_DEFAULT_PASS=password
+
+cassandra:
+  image: cassandra:3.9
+  ports:
+    - "9042:9042"
+  volumes:
+    - /var/lib/cassandra:/Users/rolandormrod/Dev/uk.co.elder/docker-data
