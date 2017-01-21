@@ -2,7 +2,7 @@ import com.github.retronym.SbtOneJar._
 
 oneJarSettings
 
-name := "elder"
+name := "elder-chart-processing-worker"
 
 version := "SNAPSHOT"
 
@@ -12,14 +12,10 @@ scalaVersion  := "2.11.8"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:implicitConversions")
 
-// Add external conf directory to the classpath
-unmanagedClasspath in Test += baseDirectory.value / "conf"
-
-unmanagedClasspath in Runtime += baseDirectory.value / "conf"
-
 fork in run := true
 
 mainClass in (Compile, run) := Some("uk.co.elder.Main")
+
 
 resolvers ++= Seq(
   "typesafe.com"                     at "http://repo.typesafe.com/typesafe/repo/",
@@ -38,10 +34,11 @@ resolvers ++= Seq(
   val scalazVersion = "7.2.7"
   val Json4sVersion = "3.2.11"
   val Log4jVersion = "2.1"
-  val ScalaTestVersion = "2.2.1"
+  val ScalaTestVersion = "2.2.4"
   val SlickVersion = "2.1.0"
 
   libraryDependencies ++= Seq(
+    "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "io.relayr" %% "rabbitmq-scala-client" % "0.1.8",
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.scalaz" %% "scalaz-effect" % scalazVersion,
@@ -55,6 +52,7 @@ resolvers ++= Seq(
     "com.typesafe.slick" %% "slick" % SlickVersion,
 
     "net.codingwell" %% "scala-guice" % "4.0.0-beta4",
+
     "org.apache.logging.log4j" % "log4j-api" % Log4jVersion,
     "org.apache.logging.log4j" % "log4j-core" % Log4jVersion,
     "org.apache.logging.log4j" % "log4j-slf4j-impl" % Log4jVersion,
@@ -62,7 +60,7 @@ resolvers ++= Seq(
     "org.scalaj"              %%  "scalaj-http"              % "1.1.4",
     "com.websudos"            %%  "phantom-dsl"              % "1.26.1",
     "joda-time"               %   "joda-time"                % "2.7",
-
+    "net.databinder.dispatch" %% "dispatch-core"             % "0.11.3",
     "com.github.tototoshi"    %%  "scala-csv"                % "1.2.1",
     "com.datastax.cassandra"  %   "cassandra-driver-core"    % "3.0.2" % "compile",
     //-------------------------------------------------------------------------
@@ -71,6 +69,6 @@ resolvers ++= Seq(
     "org.typelevel" %% "scalaz-scalatest" % "0.3.0" % "test",
     "com.typesafe.slick" %% "slick-testkit" % SlickVersion % "test",
     "org.mockito" % "mockito-core" % "1.10.8" % "test",
-    "org.scalatest" %% "scalatest" % ScalaTestVersion
+    "org.scalatest" %% "scalatest" % ScalaTestVersion % "test"
   )
 }

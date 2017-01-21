@@ -4,6 +4,7 @@ import uk.co.elder.app.model.{Datapoints, Quote}
 import uk.co.elder.app.charting.calculators._
 import uk.co.elder.app.model.ElderError
 import org.joda.time.LocalDate
+import uk.co.elder.DataSeries
 
 import scalaz.concurrent.Task
 import scalaz.{-\/, \/, \/-}
@@ -44,7 +45,7 @@ object RefreshDatapoints {
     }
   }
 
-  private def tryGetVal(vals : List[(LocalDate, BigDecimal)], dateToGet: LocalDate) : Option[BigDecimal] = {
+  private def tryGetVal(vals : DataSeries[BigDecimal], dateToGet: LocalDate) : Option[BigDecimal] = {
     for ((_, value) <- vals.find(_._1 == dateToGet)) yield value
   }
 }

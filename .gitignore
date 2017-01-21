@@ -1,5 +1,5 @@
 .DS_store
-*~
+*.jar
 .idea/
 .idea_modules/
 target/

@@ -2,9 +2,8 @@ package uk.co
 
 import io.relayr.amqp.Message
 import org.joda.time.LocalDate
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
+import java.util.concurrent.Executors
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scalaz.Monoid
 import scalaz.concurrent.Task
 import scala.util.{Failure, Success}
@@ -17,6 +16,7 @@ package object elder {
   implicit def dataSeriesReverseChronoligicalOrdering[T]: Ordering[(LocalDate, T)] = Ordering.fromLessThan((e, f) => e._1 isAfter f._1)
 
   implicit class ExtendedBigDecimal(val value: BigDecimal) extends AnyVal {
+
     def difference(other: BigDecimal) = value.max(other) - value.min(other)
     def max(other: BigDecimal) = if (other > value) other else value
     def min(other: BigDecimal) = if (other > value) value else other
@@ -54,7 +54,7 @@ package object elder {
 
     import scalaz.Scalaz._
 
-    def asTask: Task[A] = {
+    def asTask(): Task[A] = {
       Task.async {
         register =>
           x.onComplete {
@@ -75,6 +75,18 @@ package object elder {
         case \/-(r) => p.success(r); ()
       }
       p.future
+    }
+  }
+
+  implicit val ioNonBlockingContext = new ExecutionContext {
+    val threadPool = Executors.newSingleThreadExecutor()
+
+    def execute(runnable: Runnable) {
+      threadPool.submit(runnable)
+    }
+
+    def reportFailure(t: Throwable): Unit = {
+      println("Execution failed " + t.getMessage)
     }
   }
 }

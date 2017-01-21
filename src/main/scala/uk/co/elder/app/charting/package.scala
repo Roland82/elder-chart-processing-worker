@@ -1,16 +1,18 @@
 package uk.co.elder.app
 
-import java.math.{RoundingMode, MathContext}
-import uk.co.elder.{Minus, Dividable}
+import java.math.{MathContext, RoundingMode}
+
+import uk.co.elder.{DataSeries, Dividable, Minus, dataSeriesChronoligicalOrdering}
 import uk.co.elder.app.charting.indicators._
+
 import scalaz.Monoid
 import scalaz.syntax.monoid._
 
 package object charting {
   val rounding = new MathContext(4, RoundingMode.HALF_UP)
 
-  def slidingFold[F, K](period: Int)(l: List[(K, F)])(implicit m: Ordering[(K, F)], ev: Monoid[F]): List[(K, F)] = {
-    def go(): List[(K, F)] = {
+  def slidingFold[F, K](period: Int)(l: DataSeries[F])(implicit m: Ordering[(K, F)], ev: Monoid[F]): DataSeries[F] = {
+    def go(): DataSeries[F] = {
       val x = for (e <- l.sorted.sliding(period)) yield e.last._1 -> e.map(e => e._2).fold[F](ev.zero)(_ |+| _)
       x.toList
     }
@@ -18,14 +20,9 @@ package object charting {
     if (l.size < period) List.empty else go()
   }
 
-  def movingAverage[F, K](period: Int)(l: Map[K, F])(implicit m: Ordering[(K, F)], ev: Monoid[F], d: Dividable[F]): Map[K, F] = {
-    val r = for (e <- l.toList.sorted.sliding(period)) yield e.last._1 -> e.map(e => e._2).fold(ev.zero)(_ |+| _)
-    r.toMap
-  }
-
-  def slidingApply[K, F, RF](period: Int)(l: List[(K, F)])(f: List[F] => RF) (implicit m: Ordering[(K, F)]): Map[K, RF] = {
+  def slidingApply[K, F, RF](period: Int)(l: DataSeries[F])(f: List[F] => RF) (implicit m: Ordering[(K, F)]): DataSeries[RF] = {
     val returnList = for { group <- l.sorted.sliding(period) } yield group.last._1 -> f(group.map(_._2))
-    returnList.toMap
+    returnList.toList
   }
 
   def slidingApplyList[K, F, RF](l: List[F])(f: List[F] => RF)(period: Int) (implicit m: Ordering[F]): List[RF] = {

@@ -60,7 +60,7 @@ object DatapointsCassandraRepository extends DatapointsRecord with CassandraSess
 
   def insertDatapointsList(dp: List[Datapoints]): Task[\/[ElderError, List[ResultSet]]] = {
     import uk.co.elder.FutureExtensionOps
-    val task = new FutureExtensionOps(Future.sequence(dp.map(insertQuery).map(_.future()))).asTask
+    val task = new FutureExtensionOps(Future.sequence(dp.map(insertQuery).map(_.future()))).asTask()
     task.map { e => \/.right(e) }
   }
 

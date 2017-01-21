@@ -37,7 +37,7 @@ object PositiveAndNegative {
 trait DirectionalMovment {
   def directionalMovement(
       components: DataSeries[DirectionalMovementComponents])
-    : List[(LocalDate, DirectionalIndicatorResult)] = {
+    : DataSeries[DirectionalIndicatorResult] = {
     val trueRangeComponents = components map {
       case (date, e) =>
         date -> TrueRangeComponents.fromDirectionalMovementComponents(e)
@@ -90,7 +90,7 @@ trait DirectionalMovment {
 
   private def adxSmoothing(input: DataSeries[BigDecimal],
                            period: Int): DataSeries[BigDecimal] = {
-    def calculate(windows: Seq[(LocalDate, BigDecimal)],
+    def calculate(windows: DataSeries[BigDecimal],
                   results: DataSeries[BigDecimal]): DataSeries[BigDecimal] = {
       windows match {
         case x :: xs => {
@@ -115,7 +115,7 @@ trait DirectionalMovment {
   }
 
   // TODO: Make this more generic and move to utility library
-  private def merge[A, B](a: List[(LocalDate, A)], b: List[(LocalDate, B)]) = {
+  private def merge[A, B](a: DataSeries[A], b: DataSeries[B]) = {
     for (f <- a;
          g <- b.find(e => e._1 == f._1)) yield (f._1, f._2, g._2)
   }

@@ -1,26 +1,28 @@
 package uk.co.elder.app.service.dataproviders
 
 import java.io.StringReader
+import java.net.URL
 
-import uk.co.elder.app.model._
 import com.github.tototoshi.csv._
-import uk.co.elder.app.model.{ElderError, Quote}
+import com.ning.http.client.Response
+import dispatch.Defaults._
+import dispatch._
 import org.joda.time.LocalDate
 import org.joda.time.format.DateTimeFormat
+import uk.co.elder.YahooFinanceServiceConfig
+import uk.co.elder.app.model.{ElderError, Quote, _}
 
-import scala.util.Try
-import scalaj.http.Http
-import scalaz.{-\/, DisjunctionT, \/, \/-}
-import scalaz.Maybe.Just
+import scalaz.Maybe.{Just, empty}
 import scalaz.concurrent.Task
-import scalaz.Maybe.empty
+import scalaz.{DisjunctionT, \/}
 
 object YahooStockQuoteProvider {
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+  private val httpClient = Http.configure(_.setConnectTimeout(4000))
 
-  def request(symbol: Ticker, host: String): Task[ElderError \/ List[Quote]] = {
+  def request(symbol: Ticker, yahooConfig: YahooFinanceServiceConfig): Task[ElderError \/ List[Quote]] = {
     val chain = for {
-      response <- DisjunctionT(callYahoo(symbol, host))
+      response <- DisjunctionT(callYahoo(symbol, yahooConfig))
       quotes <- DisjunctionT(parseCsv(symbol)(response))
     } yield quotes
 
@@ -48,17 +50,20 @@ object YahooStockQuoteProvider {
     }
   }
 
-  private def callYahoo(symbol: Ticker, host: String): Task[ElderError \/ String] = {
-    Task {
-      Try {
-        val res = Http(s"http://$host/table.csv?s=${symbol.value}&ignore=.csv").timeout(2000, 2000).asString
-        res.code match {
-          case 200 => \/-(res.body)
-          case r => -\/(ElderError(s"Call to yahoo failed for ${symbol.value}. Response code = $r", empty))
-        }
-      }.recover {
-        case e: Exception => -\/(ElderError(s"Something went wrong with the HTTP request for ${symbol.value}.", Just(e)))
-      }.get
+
+
+  private def callYahoo(symbol: Ticker, yahooConfig: YahooFinanceServiceConfig): Task[ElderError \/ String] = {
+    import uk.co.elder.FutureExtensionOps
+
+    val svc = url(yahooConfig.downloadCsvUrl(symbol)) > { (r: Response) => r }
+
+    val result = httpClient(svc)(uk.co.elder.ioNonBlockingContext)
+    val response = new FutureExtensionOps(result).asTask()
+
+    response map { t => t.getStatusCode match {
+        case 200 => \/.right(t.getResponseBody())
+        case s => \/.left(ElderError(s"Call to yahoo failed for ${symbol.value}. Response code = ${s}", empty))
+      }
     }
   }
 }

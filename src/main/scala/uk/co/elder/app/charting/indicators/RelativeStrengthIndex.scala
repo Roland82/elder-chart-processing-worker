@@ -1,6 +1,6 @@
 package uk.co.elder.app.charting.indicators
 
-import uk.co.elder.{dataSeriesChronoligicalOrdering, Dividable, DataSeries, DividableSyntax}
+import uk.co.elder.{Dividable, DataSeries, DividableSyntax}
 import uk.co.elder.app.charting.Smoothing.simpleMovingAverage
 import uk.co.elder.app.charting._
 import org.joda.time.LocalDate
@@ -32,7 +32,7 @@ trait RelativeStrengthIndex {
   import uk.co.elder.dataSeriesChronoligicalOrdering
 
   def relativeStrengthIndex(d: DataSeries[BigDecimal], period: Int) : DataSeries[BigDecimal] = {
-    def calculateRs(averages: List[(LocalDate, DailyChange)], changes: List[(LocalDate, DailyChange)]) : DataSeries[BigDecimal] = {
+    def calculateRs(averages: DataSeries[DailyChange], changes: DataSeries[DailyChange]) : DataSeries[BigDecimal] = {
       val (_, lastAverage) = averages.last
       changes match {
         case (date, change)::xs => calculateRs(averages :+ (date, ((lastAverage * (period - 1)) |+| change) / period), xs)
@@ -44,9 +44,9 @@ trait RelativeStrengthIndex {
 
     if (d.size < period) return List.empty
     val changes = slidingApply(2)(d)(l => l(1) - l(0))
-    val dailyChanges = for ((date, change) <- changes) yield (date, DailyChange.create(change))
-    val nextChanges = dailyChanges.toList.sorted.drop(period)
-    val firstAverage = simpleMovingAverage(dailyChanges.toList.sorted.take(period), period).take(1)
+    val dailyChanges = (for ((date, change) <- changes) yield (date, DailyChange.create(change))).sorted
+    val nextChanges = dailyChanges.drop(period)
+    val firstAverage = simpleMovingAverage(dailyChanges.take(period), period).take(1)
     calculateRs(firstAverage, nextChanges) map rsi
   }
 }

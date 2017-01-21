@@ -11,15 +11,14 @@ private object Smoothing {
 
   def average[A](as: Seq[A])(implicit n: Numeric[A]) : BigDecimal = BigDecimal(n.toDouble(as.sum) / as.size)
 
-  def simpleMovingAverage[A](as: List[(LocalDate, A)], period: Int)(implicit m: Monoid[A], d: Dividable[A], o: Ordering[(LocalDate, A)]) : List[(LocalDate, A)] = {
-    val a = for ((date, value) <- slidingFold(period)(as)) yield date -> value / period
-    a.toList
+  def simpleMovingAverage[A](as: DataSeries[A], period: Int)(implicit m: Monoid[A], d: Dividable[A], o: Ordering[(LocalDate, A)]) : DataSeries[A] = {
+    for ((date, value) <- slidingFold(period)(as)) yield date -> value / period
   }
 
   def wilderMovingAverage[A](input: DataSeries[A], period: Int)(implicit m: Minus[A], d: Dividable[A], p: Monoid[A]): DataSeries[A] = {
     if (input.size < period) return List.empty
 
-    def go(previous: A, series: List[(LocalDate, A)], output: DataSeries[A]): DataSeries[A] = {
+    def go(previous: A, series: DataSeries[A], output: DataSeries[A]): DataSeries[A] = {
       series match {
         case (date, value)::xs => {
           val currentMa = previous - (previous / period) |+| value
@@ -36,7 +35,7 @@ private object Smoothing {
   }
 
   def exponentialMovingAverage(input: DataSeries[BigDecimal], period: Int) : DataSeries[BigDecimal] = {
-    val sorted = input.sorted.toSeq
+    val sorted = input.sorted
     val multiplier = 2.toFloat / (period + 1)
     val slidingPeriods = sorted.sliding(period).toSeq
     val emaStart = List(

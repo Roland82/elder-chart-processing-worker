@@ -1,16 +1,13 @@
 package uk.co.elder.listener
 
 import io.relayr.amqp.{ChannelOwner, _}
-import uk.co.elder.QueueConsumer
+import uk.co.elder.{QueueConsumer, ElderConfig}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.SECONDS
 import scalaz._
 import uk.co.elder.listener.ConnectionBuilder._
 
-case class ExchangeConfig(exchangeName: String, durable: Boolean, autoDelete: Boolean)
-case class QueueConfig(queueName: String, durable: Boolean, autoDelete: Boolean)
-case class RabbitMQConfig(connString: String, exchangeConfig: ExchangeConfig, queueConfig: QueueConfig)
 
 object Connection {
   def connectAndConsume(q: QueueConsumer) = {
@@ -18,8 +15,9 @@ object Connection {
       connection <- createConnection
       queueDeclare <- getQueueDetails
       channel <- newChannel(connection)
-      _ <- declareExchange(channel)
-      _ <- setupQueue(channel)(queueDeclare)
+      exchange <- declareExchange(channel)
+      queueName <- setupQueue(channel, queueDeclare)
+      _ <- bindQueue(channel, queueName, exchange)
       closeable <- addConsumer(channel)(queueDeclare)(q)
     } yield closeable
   }
@@ -27,22 +25,22 @@ object Connection {
 
 object ConnectionBuilder {
   def createConnection =
-      Reader[RabbitMQConfig, ConnectionHolder] { e => {
+      Reader[ElderConfig, ConnectionHolder] { e => {
         ConnectionHolder
-          .builder(e.connString)
+          .builder(e.connectionDetails.connectionString())
           .reconnectionStrategy(ReconnectionStrategy.JavaClientFixedReconnectDelay(Duration(1, SECONDS)))
           .build()
       }
     }
 
-  def getQueueDetails = Reader[RabbitMQConfig, QueueDeclare] { e =>
+  def getQueueDetails = Reader[ElderConfig, QueueDeclare] { e =>
     QueueDeclare(Some(e.queueConfig.queueName), durable = e.queueConfig.durable, exclusive = false, autoDelete = e.queueConfig.autoDelete)
   }
 
   def newChannel(c: ConnectionHolder) =
-    Reader[RabbitMQConfig, ChannelOwner] { _ => c.newChannel() }
+    Reader[ElderConfig, ChannelOwner] { _ => c.newChannel() }
 
-  def declareExchange(c: ChannelOwner) = Reader[RabbitMQConfig, Exchange] { e =>
+  def declareExchange(c: ChannelOwner) = Reader[ElderConfig, Exchange] { e =>
       c.declareExchange(
         e.exchangeConfig.exchangeName,
         ExchangeType.direct,
@@ -50,10 +48,21 @@ object ConnectionBuilder {
         autoDelete = e.exchangeConfig.autoDelete)
   }
 
-  def setupQueue(c: ChannelOwner)(queueDeclare: QueueDeclare) =
-    Reader[RabbitMQConfig, String] { e => c.declareQueue(queueDeclare) }
+  def setupQueue(c: ChannelOwner, queueDeclare: QueueDeclare) =
+    Reader[ElderConfig, String] { e =>
+      {
+        c.declareQueue(queueDeclare)
+      }
+    }
 
-  def addConsumer(c: ChannelOwner)(queueDeclare: QueueDeclare)(consumer: QueueConsumer) = Reader { (e: RabbitMQConfig) => {
+  def bindQueue(c: ChannelOwner, queueName: String, exchange: Exchange) =
+    Reader[ElderConfig, Unit] { e => {
+        c.queueBind(QueuePassive(queueName), exchange, "stock-data")
+      }
+    }
+
+
+  def addConsumer(c: ChannelOwner)(queueDeclare: QueueDeclare)(consumer: QueueConsumer) = Reader { (e: ElderConfig) => {
       c.addConsumer(queueDeclare, consumer)
     }
   }
